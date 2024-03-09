@@ -36,6 +36,13 @@ try:
 except Exception as e:
     print(e) 
 
+def idToName(interaction: discord.Interaction, discordID: str):
+    members = interaction.guild.members
+    for member in members:
+        # print("name", member.id)
+        if (str(member.id) == discordID):
+            return member.name
+    return False
 
 # Helper Functions
 def is_admin(discordID: str):
@@ -127,7 +134,7 @@ class PaginatorView(discord.ui.View):
 
 
     @discord.ui.button(label="<", style=discord.ButtonStyle.blurple)
-    async def back_button(self, interaction: discord.Interaction):
+    async def back_button(self, interaction: discord.Interaction, button: discord.ui.Button):
         self._queue.rotate(1)
         embed = self._queue[0]
         self._current_page -= 1
@@ -135,7 +142,7 @@ class PaginatorView(discord.ui.View):
         await interaction.response.edit_message(embed=embed)
         
     @discord.ui.button(label=">", style=discord.ButtonStyle.blurple)
-    async def forward_button(self, interaction: discord.Interaction):
+    async def forward_button(self, interaction: discord.Interaction, button: discord.ui.Button):
         self._queue.rotate(-1)
         embed = self._queue[0]
         self._current_page += 1
@@ -195,26 +202,40 @@ async def fam_invite_slash(interaction: discord.Interaction, invitee: discord.me
 
 # Leaving
 @bot.tree.command(name="fam_leave")
-@app_commands.describe(family="family name")
-async def fam_leave_slash(interaction: discord.Interaction, family: str):
+async def fam_leave_slash(interaction: discord.Interaction):
     try:
-        author = str(interaction.user)
+        author_id = str(interaction.user.id)
+        author_name = str(interaction.user.name)
+        print("id", author_id)
+        print("author name", author_name)
+        print(db.families.find_one())
+        response = db.families.find_one({'members': {'$in': [author_id]}})
 
-        response = db.families.find_one({'name': family})
-
-        if not response is None:
-
-            # Remove author from family
-            family = response['name']
-            response = db.families.update_one({'name': family}, {'$pull': {'members': author}})
-
-            # Print/return response whether or not author was in family
-            if response.modified_count == 1:
-                await interaction.response.send_message(f"{author} has left {family}.")
-            else:
-                raise Exception(f"You are not currently a member of {family}.")
+        if response is None:
+            await interaction.response.send_message(f"You are not currrently in a family.")
+            return
         else:
-            raise Exception(f"{family} does not exist.")
+            update_response = db.families.update_one({'name': response['name']}, {'$pull': {'members': author_id}})
+            if (update_response.modified_count == 1):
+                await interaction.response.send_message(f"{author_name} has left {response["name"]}.")
+                return
+            else:
+                await interaction.response.send_message("Something went wrong :(")
+                raise Exception(f"Something went wrong in family leave")
+
+        # if not response is None:
+
+        #     # Remove author from family
+        #     family = response['name']
+        #     response = db.families.update_one({'name': family}, {'$pull': {'members': author}})
+
+        #     # Print/return response whether or not author was in family
+        #     if response.modified_count == 1:
+        #         await interaction.response.send_message(f"{author} has left {family}.")
+        #     else:
+        #         raise Exception(f"You are not currently a member of {family}.")
+        # else:
+        #     raise Exception(f"{family} does not exist.")
 
     except Exception as e:
         await interaction.response.send_message(f"Error: {e}")
@@ -225,16 +246,16 @@ async def fam_leave_slash(interaction: discord.Interaction, family: str):
 @app_commands.describe(family="family name")
 async def fam_join_slash(interaction: discord.Interaction, family: str):
     try:
-        author = str(interaction.user)
+        author_id = str(interaction.user.id)
+        author_name = interaction.user.name
         
         # Check if user is invited to family specified
-        response = db.families.find_one({'name': family, 'invited': {'$in': [author]}})
-        print(response)
-        print(author)
+        response = db.families.find_one({'name': family, 'invited': {'$in': [author_id]}})
         if not response is None:
-            db.families.update_one({'name': family}, {'$addToSet': {'members': author}, '$pull': {'invited': author}})
-            await interaction.response.send_message(f"{author} has joined {family}!")
+            db.families.update_one({'name': family}, {'$addToSet': {'members': author_id}, '$pull': {'invited': author_id}})
+            await interaction.response.send_message(f"{author_name} has joined {family}!")
         else:
+            await interaction.response.send_message(f"You have not been invited to {family}.")
             raise Exception(f"You have not been invited to {family}.")
 
     except Exception as e:
@@ -242,19 +263,21 @@ async def fam_join_slash(interaction: discord.Interaction, family: str):
             
 # Info
 @bot.tree.command(name="fam_info")
-@app_commands.describe()
-async def fam_info_slash(interaction: discord.Interaction):
+@app_commands.describe(family="family name")
+async def fam_info_slash(interaction: discord.Interaction, family: str):
     try:
-        author = str(interaction.user)
-
-        response = db.families.find_one({'members': {'$in': [author]}})
-
+        response = db.families.find_one({'name': family})
         if response is None:
-            raise Exception(f"{author} is not currently in a family.")
+            raise Exception(f"Family {family} does not exist.")
         else:
             name = response['name']
             points = response['points']
-            members = ', '.join(response['members'])
+            member_names = []
+            for member_id in response['members']:
+                name = idToName(interaction, member_id)
+                if name != False:
+                    member_names.append(name)
+            members = ', '.join(member_names)
             embed=discord.Embed(title=name, description='family description', color=0xf8d980)
             embed.add_field(name='Members', value=members, inline=False)
             embed.add_field(name='Points', value=points, inline=False)
@@ -298,7 +321,7 @@ async def fam_leaderboard_slash(interaction: discord.Interaction):
             family = families[f]
 
             # Create new page for more families
-            if (f % 5 == 0):
+            if (f % 1 == 0):
                 embeds.append(discord.Embed(title="Fam Leaderboard", color=0xf8d980))
 
             # Add family and their score as a row
@@ -315,23 +338,29 @@ async def fam_leaderboard_slash(interaction: discord.Interaction):
 @app_commands.describe(family="family name")
 async def fam_score_slash(interaction: discord.Interaction, family: str=""):
     try:
-        author = interaction.user.name
-        families = db.families.find()
-        family_names = [f['name'] for f in families]
-
-        if not has_family(author) and family == "":
-            raise Exception(f"You do not have a family!")
-        elif family == "":
-            # Get default family if not specified
-            f = get_families(author)[0]
-            await interaction.response.send_message(f"{f['name']} currently has {f['points']} points!")
-        elif not family in family_names:
-            # Check if specified family exists
-            raise Exception(f"{family} does not exist!")
+        response = db.families.find_one({'name': family})
+        if response is None:
+            await interaction.response.send_message(f"{family} does not exist!")
         else:
-            # Print score of specified family is exists
-            f = db.families.find_one({'name': family})
-            await interaction.response.send_message(f"{f['name']} currently has {f['points']} points!")
+            await interaction.response.send_message(f"{family} currently has {response['points']} points!")
+        
+        # author = interaction.user.name
+        # families = db.families.find()
+        # family_names = [f['name'] for f in families]
+
+        # if not has_family(author) and family == "":
+        #     raise Exception(f"You do not have a family!")
+        # elif family == "":
+        #     # Get default family if not specified
+        #     f = get_families(author)[0]
+        #     await interaction.response.send_message(f"{f['name']} currently has {f['points']} points!")
+        # elif not family in family_names:
+        #     # Check if specified family exists
+        #     raise Exception(f"{family} does not exist!")
+        # else:
+        #     # Print score of specified family is exists
+        #     f = db.families.find_one({'name': family})
+        #     await interaction.response.send_message(f"{f['name']} currently has {f['points']} points!")
 
     except Exception as e:
         await interaction.response.send_message(f"Error: {e}")
@@ -343,20 +372,40 @@ async def fam_score_slash(interaction: discord.Interaction, family: str=""):
 async def fam_missions_slash(interaction: discord.Interaction):
     try:
         response = db.missions.find()
-        output = []
 
         # Put all missions into their own embed
         embeds = []
 
         for mission in response:
             embed=discord.Embed(title="Mission", color=0xf8d980)
-            embed.add_field(name=mission['title'], value=f"Points: {mission['points']}\n{mission['description']}", inline=False)
+            embed.add_field(name=mission['name'], value=f"Points: {mission['points']}\n{mission['description']}", inline=False)
             embeds.append(embed)
 
         # Place mission embeds into paginator and display the initial page
         missions = PaginatorView(embeds)
         await interaction.response.send_message(embed=await missions.initial, view=missions)
 
+    except Exception as e:
+        await interaction.response.send_message(f"Error: {e}")
+        
+
+@bot.tree.command(name="add_mission")
+@app_commands.describe(name="name of mission", description="description of mission", points="can be +2, x2, -1, etc...")
+async def add_mission_slash(interaction: discord.Interaction, name: str, description: str, points: str):
+    try:
+        roles = interaction.user.roles
+        print(roles)
+        if not any(role.name == "admin" for role in roles):
+            await interaction.response.send_message(f"You are not an admin!")
+            return
+        
+        db.missions.insert_one({
+            "name": name,
+            "type": "global",
+            "description": description,
+            "points": points
+        })
+        await interaction.response.send_message(f"{name} has been added!")
     except Exception as e:
         await interaction.response.send_message(f"Error: {e}")
 
