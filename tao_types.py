@@ -1,10 +1,13 @@
 from typing import List, TypedDict
+from bson.objectid import ObjectId
 
 class Item(TypedDict):
+    _id: ObjectId
     name: str
     description: str
 
 class Family(TypedDict):
+    _id: ObjectId
     name: str
     points: int
     completed_missions: List[str]
@@ -12,8 +15,10 @@ class Family(TypedDict):
     inventory: List[Item]
 
 class Mission(TypedDict):
+    _id: ObjectId
+    mission_type: str
     name: str
     points: int
-    multiplier: str
+    operator: str
     description: str
 
