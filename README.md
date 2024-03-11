@@ -1,0 +1,6 @@
+- globals are multiple missions spread across weeks
+- expiry dates
+    - dont display missions past expiry
+    - dont let people submit to expiry
+- have the different cogs use the db cog instead of spinning up a new db instance (was lazy)
+- list missions to use global and weekly missions and no steals
