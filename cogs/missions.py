@@ -15,10 +15,11 @@ from utils import await_and_raise_error, get_global_mission, has_family, is_admi
 class MissionsCog(commands.Cog):
     def __init__(self, bot: commands.Bot):
         self.bot = bot
-        uri = os.getenv("MONGO_URI")
-        client = MongoClient(uri, server_api=ServerApi('1'))
-        db_name = os.getenv("DB_NAME")
-        self.db: database.Database = client[db_name]
+        self.db: database.Database = bot.get_cog("DBCog").db
+    
+    @commands.Cog.listener()
+    async def on_ready(self):
+        print("MissionsCog is ready.")
     
     @app_commands.command(name="fam_missions")
     async def fam_missions_slash(self, interaction: discord.Interaction):

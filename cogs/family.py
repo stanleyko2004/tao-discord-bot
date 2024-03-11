@@ -14,10 +14,7 @@ from utils import await_and_raise_error, has_family, id_to_name, pull_invites
 class FamilyCog(commands.Cog):
     def __init__(self, bot: commands.Bot):
         self.bot = bot
-        uri = os.getenv("MONGO_URI")
-        client = MongoClient(uri, server_api=ServerApi('1'))
-        db_name = os.getenv("DB_NAME")
-        self.db: database.Database = client[db_name]
+        self.db: database.Database = bot.get_cog("DBCog").db
     
     @commands.Cog.listener()
     async def on_ready(self):

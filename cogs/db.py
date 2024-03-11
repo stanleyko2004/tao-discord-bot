@@ -13,6 +13,10 @@ class DBCog(commands.Cog):
         self.db = db
         self.ping_mongo()
 
+    @commands.Cog.listener()
+    async def on_ready(self):
+        print("DBCog is ready.")
+
     def ping_mongo(self):
         try:
             self.db.client.admin.command('ping')
