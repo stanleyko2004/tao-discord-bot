@@ -17,6 +17,7 @@ class Family(TypedDict):
 class Mission(TypedDict):
     _id: ObjectId
     mission_type: str
+    week: int
     name: str
     points: int
     operator: str
