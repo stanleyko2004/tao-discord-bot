@@ -19,6 +19,7 @@ class Mission(TypedDict):
     mission_type: str
     week: int
     name: str
+    repeat_times: int
     points: int
     operator: str
     description: str
