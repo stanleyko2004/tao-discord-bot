@@ -28,8 +28,8 @@ def get_global_mission(name: str, week: int, db: database.Database) -> Mission:
         return to_add
     return response 
 
-def weeks_since_start(date: datetime = datetime.now()) -> int:
-    start_date: datetime = datetime(2024, 3, 10)
+def weeks_since_start(db: database.Database, date: datetime = datetime.now()) -> int:
+    start_date: datetime = db.data.find_one({"name": "start_week"})["date"]
     difference: timedelta = date - start_date
     weeks: int = difference // timedelta(days=7)
     return weeks

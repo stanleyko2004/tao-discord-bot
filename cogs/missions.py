@@ -5,6 +5,7 @@ import discord
 from discord.ext import tasks, commands
 from discord import app_commands
 from pymongo import database
+import pytz
 
 from views import PaginatorView
 from tao_types import Mission
@@ -22,8 +23,8 @@ class MissionsCog(commands.Cog):
     
     async def fam_missions_slash(self, interaction: discord.Interaction):
         try:
-            global_missions: List[Mission] = list(self.db.missions.find({"mission_type": "global", "week": weeks_since_start()}))
-            weekly_missions: List[Mission] = list(self.db.missions.find({"mission_type": "weekly", "week": weeks_since_start()}))
+            global_missions: List[Mission] = list(self.db.missions.find({"mission_type": "global", "week": weeks_since_start(self.db)}))
+            weekly_missions: List[Mission] = list(self.db.missions.find({"mission_type": "weekly", "week": weeks_since_start(self.db)}))
             all_missions: List[Mission] = global_missions + weekly_missions
 
             # Put all missions into their own embed
@@ -76,7 +77,7 @@ class MissionsCog(commands.Cog):
                 await_and_raise_error(interaction, f"You are not in a family!")
             
             family = self.db.families.find_one({'members': {'$in': [str(interaction.user.id)]}})
-            await interaction.response.send_message(f"Mission submitted! Waiting for verification for {name} mission for week {weeks_since_start()} for family {family['name']}!")
+            await interaction.response.send_message(f"Mission submitted! Waiting for verification for {name} mission for week {weeks_since_start(self.db)} for family {family['name']}!")
         except Exception as e:
             print(f"Error: {e}")
 
@@ -114,14 +115,12 @@ class MissionsCog(commands.Cog):
         except Exception as e:
             print(f"Error: {e}")
             
-    @tasks.loop(hours = 2)
+    @tasks.loop(time=datetime.time(hours=23, minutes=45, tzinfo=pytz.timezone('America/Los_Angeles')))
     async def generate_globals(self):
-        # checks every 2 hours to see if the new week is soon and if so, generates the global missions for the next week
-        # TODO: there's gotta be a better way to do this
-        current_week = weeks_since_start()
-        week_in_two_hours = weeks_since_start(datetime.now() + timedelta(hours=2)) 
+        current_week = weeks_since_start(self.db)
+        week_in_two_hours = weeks_since_start(self.db, datetime.now() + timedelta(hours=2)) 
         if (week_in_two_hours > current_week):
-            print("Generating global missions for next week")
+            print(f"Generating global missions for week ${week_in_two_hours}")
             # generate missions for next week
             previous_week_missions = list(self.db.missions.find({"mission_type": "global", "week": current_week}))
             for mission in previous_week_missions:
