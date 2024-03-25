@@ -12,18 +12,14 @@ def get_global_mission(name: str, week: int, db: database.Database) -> Mission:
     if (response is None):
         # no mission with that week yet
         mission: Mission = db.missions.find_one({"name": name})
-        print(mission)
+        print('----', mission)
         if (mission is None):
             print(f"mission {name} does not exist")
             return
-        to_add: Mission = {
-            'mission_type': "global",
-            'week': week,
-            'name': mission["name"],
-            'points': mission["points"],
-            'operator': mission["operator"],
-            'description': mission['description']
-        }
+        
+        to_add: Mission = mission.copy()
+        to_add["week"] = week
+        to_add.pop("_id", None)
         db.missions.insert_one(to_add)
         return to_add
     return response 

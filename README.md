@@ -1,6 +1,4 @@
-- expiry dates
-    - dont display missions past expiry
-    - dont let people submit to expiry
 - list missions to use global and weekly missions and no steals
 - add test bot
 - hot reload
+- mystery boxes
