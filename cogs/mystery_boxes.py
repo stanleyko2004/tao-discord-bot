@@ -7,7 +7,7 @@ from pymongo import database
 from pymongo.results import InsertOneResult
 
 from tao_types import Family, Mission, MysteryBox
-from utils import is_admin, weeks_since_start
+from utils import is_admin, update_points, weeks_since_start
 
 
 class MysteryBoxesCog(commands.Cog):
@@ -80,7 +80,8 @@ class MysteryBoxesCog(commands.Cog):
                     "description": f"{mystery_box['points']} points stolen by {user_fam['name']}!"
                 }
                 resp: InsertOneResult = self.db.missions.insert_one(stolen_mission)
-                self.db.families.update_one({'name': fam}, {'$addToSet': {'completed_missions': resp.inserted_id}})
+                self.db.families.update_one({'name': target_fam['name']}, {'$addToSet': {'completed_missions': resp.inserted_id}})
+                update_points(target_fam['name'], self.db)
                 
                 stealer_mission: Mission = {
                     "mission_type": "mystery_box",
@@ -92,6 +93,7 @@ class MysteryBoxesCog(commands.Cog):
                 }
                 resp: InsertOneResult = self.db.missions.insert_one(stealer_mission) 
                 self.db.families.update_one({'name': user_fam["name"]}, {'$addToSet': {'completed_missions': resp.inserted_id}})
+                update_points(user_fam['name'], self.db)
 
                 await interaction.response.send_message(f"{mystery_box['points']} points have been stolen from {fam}!")
             if mystery_box['type'] == 'multiplier':
@@ -105,6 +107,7 @@ class MysteryBoxesCog(commands.Cog):
                 }
                 resp: InsertOneResult = self.db.missions.insert_one(multiplier_mission)
                 self.db.families.update_one({'name': user_fam["name"]}, {'$addToSet': {'completed_missions': resp.inserted_id}})
+                update_points(user_fam['name'], self.db)
                 await interaction.response.send_message(f"Used {name} to multiply points by {mystery_box['points']}!")
             
             # remove the mystery box from the user's inventory

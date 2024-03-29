@@ -9,7 +9,7 @@ import pytz
 
 from views import PaginatorView
 from tao_types import Mission, Family
-from utils import await_and_raise_error, get_global_mission, has_family, is_admin, weeks_since_start
+from utils import await_and_raise_error, get_global_mission, has_family, is_admin, update_points, weeks_since_start
 
 # 11:45 PM PST
 check_time_pst = datetime.now().astimezone(pytz.timezone('America/Los_Angeles')).replace(hour=23, minute=45, second=0, microsecond=0)
@@ -137,13 +137,13 @@ class MissionsCog(commands.Cog):
                 print(f"could not find mission {name}")
                 return
             print(self.db.missions.find_one({"name": name, "week": week}))
-            repeat_times = self.db.missions.find_one({"name": name, "week": week})["repeat_times"]
+            repeat_times: int = self.db.missions.find_one({"name": name, "week": week})["repeat_times"]
             completed = self.db.families.find({'name': family, 'completed_missions': {'$in': [mission['_id']]} })
             if (len(list(completed)) >= repeat_times):
                 print("mission quote already reached")
                 return
             self.db.families.update_one({'name': family}, {'$addToSet': {'completed_missions': mission['_id']}})
-            
+            update_points(family, self.db)
             channel: discord.TextChannel = self.bot.get_channel(payload.channel_id)
             await channel.delete()
             

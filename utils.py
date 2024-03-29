@@ -4,7 +4,36 @@ from typing import List
 import discord
 from pymongo import database
 
-from tao_types import Mission
+from tao_types import Family, Mission
+
+def update_points(family: str, db: database.Database):
+    family_data: Family = db.families.find_one({'name': family})
+    # week to mission
+    missions = {}
+    # want to calculate points week by week
+    # TODO: eventually use batch get for efficiency
+    for mission_id in family_data['completed_missions']:
+        mission: Mission = db.missions.find_one({'_id': mission_id})
+        if (mission['week'] not in missions):
+            missions[mission['week']] = []
+        missions[mission['week']].append(mission)
+    
+    points = 0
+    for week in missions:
+        week_points = 0
+        # calculate points with (points * multipliers) - stolen points
+        adding_missions = filter(lambda x: x['operator'] == '+', missions[week])
+        subtracting_missions = filter(lambda x: x['operator'] == '-', missions[week])
+        multiplier_missions = filter(lambda x: x['operator'] == 'x', missions[week])
+        for mission in adding_missions:
+            week_points += mission['points']
+        for mission in multiplier_missions:
+            week_points *= mission['points']
+        for mission in subtracting_missions:
+            week_points -= mission['points']
+        points += week_points
+        
+    db.families.update_one({'name': family}, {'$set': {'points': points}})
 
 def get_global_mission(name: str, week: int, db: database.Database) -> Mission:
     # gets global mission and lazily adds it if it's not there
@@ -12,14 +41,14 @@ def get_global_mission(name: str, week: int, db: database.Database) -> Mission:
     if (response is None):
         # no mission with that week yet
         mission: Mission = db.missions.find_one({"name": name})
-        print('----', mission)
+        
         if (mission is None):
             print(f"mission {name} does not exist")
             return
         
         to_add: Mission = mission.copy()
         to_add["week"] = week
-        to_add.pop("_id", None)
+        del to_add["_id"]
         db.missions.insert_one(to_add)
         return to_add
     return response 

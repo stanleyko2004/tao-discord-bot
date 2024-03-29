@@ -4,4 +4,4 @@
 - mystery boxes
 - change permissions to commands.has_any_role so non-admins can't see the other commands
 - gacha for mystery box?
-- POINT CALCULATOR (IMPORTANT)
+- REALLY NEED EAGER GENERATING MISSIONS
