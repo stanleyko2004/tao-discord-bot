@@ -21,6 +21,7 @@ class Mission(TypedDict):
     mission_type: str
     week: int
     name: str
+    active: bool
     repeat_times: int
     points: int
     operator: str

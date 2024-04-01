@@ -1,4 +1,5 @@
 import os
+import re
 from typing import List
 import discord
 from discord.ext import commands
@@ -27,7 +28,7 @@ class FamilyCog(commands.Cog):
 
     @app_commands.command(name="fam_create")
     @app_commands.describe(family="family name")
-    async def create_fam(self, interaction: discord.Interaction, family: str):
+    async def create_fam(self, interaction: discord.Interaction, family: str, members: str = None):
         try:
             author_id: str = str(interaction.user.id)
 
@@ -41,6 +42,12 @@ class FamilyCog(commands.Cog):
             if not response is None:
                 await await_and_raise_error(interaction, f"Family {family} already exists!")
 
+            if (members is None):
+                matches = []
+            else:
+                pattern = r'<@(\d+)>'
+                matches = re.findall(pattern, members)
+
             # Create new family
             new_family: Family = {
                 'name': family,
@@ -48,7 +55,7 @@ class FamilyCog(commands.Cog):
                 'points': 0,
                 'completed_missions': [],
                 'inventory': [],
-                'invited': [],
+                'invited': matches,
             }
 
             self.db.families.insert_one(new_family)
@@ -154,7 +161,7 @@ class FamilyCog(commands.Cog):
                     if name != False:
                         member_names.append(name)
                 members_str: str = ', '.join(member_names)
-                embed: discord.Embed = discord.Embed(title=name, description='family description', color=0xf8d980)
+                embed: discord.Embed = discord.Embed(title=family, description=response['description'], color=0xf8d980)
                 embed.add_field(name='Members', value=members_str, inline=False)
                 embed.add_field(name='Points', value=points, inline=False)
                 embed.set_footer(text='footer text')

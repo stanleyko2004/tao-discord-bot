@@ -20,7 +20,7 @@ class MysteryBoxesCog(commands.Cog):
         print("FamilyCog is ready.")
 
     @app_commands.command(name="add_mystery_box")
-    @app_commands.describe(name="name of mystery box", description="description of mystery box", type="type of mystery box", points="number of points", fam="family name")
+    @app_commands.describe(name="name of mystery box", description="description of mystery box", type="type of mystery box (steal or multiplier)", points="number of points", fam="family name")
     async def add_mystery_box(self, interaction: discord.Interaction, name: str, description: str, type: str, points: str, fam: str):
         try:
             if not is_admin(interaction.user):
@@ -96,7 +96,7 @@ class MysteryBoxesCog(commands.Cog):
                 update_points(user_fam['name'], self.db)
 
                 await interaction.response.send_message(f"{mystery_box['points']} points have been stolen from {fam}!")
-            if mystery_box['type'] == 'multiplier':
+            elif mystery_box['type'] == 'multiplier':
                 multiplier_mission: Mission = {
                     "mission_type": "mystery_box",
                     "week": weeks_since_start(self.db),
@@ -109,6 +109,8 @@ class MysteryBoxesCog(commands.Cog):
                 self.db.families.update_one({'name': user_fam["name"]}, {'$addToSet': {'completed_missions': resp.inserted_id}})
                 update_points(user_fam['name'], self.db)
                 await interaction.response.send_message(f"Used {name} to multiply points by {mystery_box['points']}!")
+            else:
+                raise NotImplementedError
             
             # remove the mystery box from the user's inventory
             self.db.families.update_one({'name': user_fam['name']}, {'$pull': {'inventory': mystery_box}})

@@ -27,12 +27,15 @@ class MissionsCog(commands.Cog):
     async def on_ready(self):
         print("MissionsCog is ready.")
     
-    @app_commands.command(name="fam_missions")
-    async def fam_missions_slash(self, interaction: discord.Interaction):
+    @app_commands.command(name="list_missions")
+    async def list_missions_slash(self, interaction: discord.Interaction):
         try:
-            global_missions: List[Mission] = list(self.db.missions.find({"mission_type": "global", "week": weeks_since_start(self.db)}))
-            weekly_missions: List[Mission] = list(self.db.missions.find({"mission_type": "weekly", "week": weeks_since_start(self.db)}))
+            global_missions: List[Mission] = list(self.db.missions.find({"mission_type": "global", "week": weeks_since_start(self.db), "active": True}))
+            weekly_missions: List[Mission] = list(self.db.missions.find({"mission_type": "weekly", "week": weeks_since_start(self.db), "active": True}))
             all_missions: List[Mission] = global_missions + weekly_missions
+
+            if len(all_missions) == 0:
+                await await_and_raise_error(interaction, "No missions found!")
 
             # Put all missions into their own embed
             embeds: List[discord.Embed] = []
@@ -58,10 +61,45 @@ class MissionsCog(commands.Cog):
                 await interaction.response.send_message(f"You are not an admin!")
                 return
             # TODO: add repeat times
+            start_date_obj = self.db.data.find_one({"name": "start_week"}) 
+            end_date_obj = self.db.data.find_one({"name": "end_week"}) 
+
+            if start_date_obj is None or end_date_obj is None:
+                await await_and_raise_error(interaction, "Start or end date not set!")
+            
+            end_date = end_date_obj["date"]
+            
+            missions = []
+            for week in range(weeks_since_start(self.db, end_date)):
+                mission: Mission = {
+                    "name": name,
+                    "mission_type": "global",
+                    "week": week,
+                    "description": description,
+                    "active": True,
+                    "repeat_times": 1,
+                    "operator": points[0],
+                    "points": int(points[1:])
+                }
+                missions.append(mission)
+            self.db.missions.insert_many(missions)
+            await interaction.response.send_message(f"{name} has been added!")
+        except Exception as e:
+            print(f"Error: {e}")
+    
+    @app_commands.command(name="add_weekly_mission")
+    @app_commands.describe(name="name of mission", description="description of mission", points="can be +2, x2, -1, etc...")
+    async def add_weekly_mission_slash(self, interaction: discord.Interaction, name: str, description: str, points: str):
+        try:
+            if not is_admin(interaction.user):
+                await interaction.response.send_message(f"You are not an admin!")
+                return
+            # TODO: add repeat times
             mission: Mission = {
                 "name": name,
-                "mission_type": "global",
-                "week": 0,
+                "mission_type": "weekly",
+                "week": weeks_since_start(self.db),
+                "active": True,
                 "description": description,
                 "repeat_times": 1,
                 "operator": points[0],
@@ -71,13 +109,65 @@ class MissionsCog(commands.Cog):
             await interaction.response.send_message(f"{name} has been added!")
         except Exception as e:
             print(f"Error: {e}")
+    
+
+    @app_commands.command(name="activate_mission")
+    @app_commands.describe(name="name of mission")
+    async def activate_mission(self, interaction: discord.Interaction, name: str):
+        """Activates a mission from current week to end week"""
+        try:
+            if not is_admin(interaction.user):
+                await interaction.response.send_message(f"You are not an admin!")
+                return
+            # TODO: add repeat times
+            mission = self.db.missions.find_one({"name": name, "week": weeks_since_start(self.db)})
+            if mission is None:
+                await await_and_raise_error("Mission does not exist!")
+                
+            end_week_obj = self.db.data.find_one({"name": "end_week"})
+            if end_week_obj is None:
+                await await_and_raise_error("End week not set!")
+            
+            for week in range(weeks_since_start(self.db), weeks_since_start(self.db, end_week_obj["date"])):
+                self.db.missions.update_one({"name": name, "week": week}, {"$set": {"active": True}})
+
+            await interaction.response.send_message(f"{mission['name']} has been activated!")
+
+        except Exception as e:
+            print(f"Error: {e}")
+
+            
+    @app_commands.command(name="deactivate_mission")
+    @app_commands.describe(name="name of mission")
+    async def deactivate_mission_slash(self, interaction: discord.Interaction, name: str):
+        """Deactivates a mission from current week to end week"""
+        try:
+            if not is_admin(interaction.user):
+                await interaction.response.send_message(f"You are not an admin!")
+                return
+            # TODO: add repeat times
+            mission = self.db.missions.find_one({"name": name, "week": weeks_since_start(self.db)})
+            if mission is None:
+                await await_and_raise_error("Mission does not exist!")
+                
+            end_week_obj = self.db.data.find_one({"name": "end_week"})
+            if end_week_obj is None:
+                await await_and_raise_error("End week not set!")
+            
+            for week in range(weeks_since_start(self.db), weeks_since_start(self.db, end_week_obj["date"])):
+                self.db.missions.update_one({"name": name, "week": week}, {"$set": {"active": False}})
+
+            await interaction.response.send_message(f"{mission['name']} has been deactivated!")
+
+        except Exception as e:
+            print(f"Error: {e}")
 
 
     @app_commands.command(name="submit_mission")
     @app_commands.describe(name="mission name")
     async def submit_mission(self, interaction: discord.Interaction, name: str):
         try:
-            response: Mission = self.db.missions.find_one({"name": name})
+            response: Mission = self.db.missions.find_one({"name": name, "week": weeks_since_start(self.db), "active": True})
             if (response is None):
                 await await_and_raise_error(interaction, f"{name} is not a mission")
             
