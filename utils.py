@@ -6,7 +6,7 @@ from pymongo import database
 
 from tao_types import Family, Mission
 
-def update_points(family: str, db: database.Database):
+def update_points(family: str, db: database.Database) -> int:
     family_data: Family = db.families.find_one({'name': family})
     # week to mission
     missions = {}
@@ -34,6 +34,7 @@ def update_points(family: str, db: database.Database):
         points += week_points
         
     db.families.update_one({'name': family}, {'$set': {'points': points}})
+    return points
 
 def get_global_mission(name: str, week: int, db: database.Database) -> Mission:
     # gets global mission and lazily adds it if it's not there

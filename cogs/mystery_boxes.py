@@ -20,7 +20,7 @@ class MysteryBoxesCog(commands.Cog):
         print("FamilyCog is ready.")
 
     @app_commands.command(name="add_mystery_box")
-    @app_commands.describe(name="name of mystery box", description="description of mystery box", type="type of mystery box (steal or multiplier)", points="number of points", fam="family name")
+    @app_commands.describe(name="name of mystery box", description="description of mystery box", type="steal or multiplier", points="number of points", fam="family name")
     async def add_mystery_box(self, interaction: discord.Interaction, name: str, description: str, type: str, points: str, fam: str):
         try:
             if not is_admin(interaction.user):

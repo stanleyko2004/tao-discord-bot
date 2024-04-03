@@ -1,3 +1,4 @@
+import asyncio
 from datetime import datetime, timedelta
 import re
 from typing import List
@@ -179,24 +180,29 @@ class MissionsCog(commands.Cog):
             # create a channel to let members submit proof
             # TODO: still need to add error checking for this
             guild: discord.Guild = interaction.guild
-            member: discord.User = interaction.user
             admin_role: discord.Role = discord.utils.get(guild.roles, name="admin")
             overwrites = {
                 guild.default_role: discord.PermissionOverwrite(read_messages=False),
-                member: discord.PermissionOverwrite(read_messages=True),
                 admin_role: discord.PermissionOverwrite(read_messages=True)
             }
+            for member in family['members']:
+                member_obj: discord.Member = guild.get_member(int(member))
+                if (member_obj is not None):
+                    overwrites[member_obj] = discord.PermissionOverwrite(read_messages=True)
             
             category: discord.CategoryChannel = discord.utils.get(guild.categories, name='Verification')
             if category is None:
                 category = await guild.create_category('Verification')
 
             channel: discord.TextChannel = await guild.create_text_channel(f'{family['name']} - {name}', overwrites=overwrites, category=category)
-            await channel.send(f"Mission submitted! Waiting for verification for {name} mission for week {weeks_since_start(self.db)} for family {family['name']}!")
-            await channel.send(f"Please submit proof for {name} mission here!")
+            await channel.send(f"Mission submitted! Waiting for verification for {name} mission for week {weeks_since_start(self.db)} for family {family['name']}! Please submit proof for {name} mission here!")
             await interaction.response.send_message(f"Mission submitted! Please check {channel.mention} for verification!")
         except Exception as e:
             print(f"Error: {e}")
+
+    async def delete_channel_after(self, channel: discord.TextChannel, time_in_seconds: int):
+        await asyncio.sleep(time_in_seconds)
+        await channel.delete()
 
     # for admins verifying missions
     @commands.Cog.listener()
@@ -206,7 +212,6 @@ class MissionsCog(commands.Cog):
             if (channel.category is None or channel.category.name != "Verification"):
                 return
             print("reaction added")
-            pattern = r"^Mission submitted! Waiting for verification for (\w+) mission for week (\d+) for family (\w+)!$" 
             message: discord.Message = await self.bot.get_channel(payload.channel_id).fetch_message(payload.message_id)
             guild: discord.Guild = self.bot.get_guild(payload.guild_id)
             member: discord.Member = guild.get_member(payload.user_id)
@@ -214,8 +219,10 @@ class MissionsCog(commands.Cog):
                 print("not admin")
                 return
             
+            pattern = r"Mission submitted! Waiting for verification for (.*?) mission for week (\d+) for family (.*?)! Please submit proof for \1 mission here!"
             match = re.search(pattern, message.content)
             if not match:
+                print('no regex match')
                 return
             
             name = match.group(1)
@@ -233,9 +240,10 @@ class MissionsCog(commands.Cog):
                 print("mission quote already reached")
                 return
             self.db.families.update_one({'name': family}, {'$addToSet': {'completed_missions': mission['_id']}})
-            update_points(family, self.db)
+            points = update_points(family, self.db)
             channel: discord.TextChannel = self.bot.get_channel(payload.channel_id)
-            await channel.delete()
+            await channel.send(f"Mission {name} for week {week} for family {family} has been verified! {family} now has {points} points! This channel will be deleted in 1 hour to prevent clutter.")
+            asyncio.ensure_future(self.delete_channel_after(channel, 3600))
             
         except Exception as e:
             print(f"Error: {e}")

@@ -161,7 +161,7 @@ class FamilyCog(commands.Cog):
                     if name != False:
                         member_names.append(name)
                 members_str: str = ', '.join(member_names)
-                embed: discord.Embed = discord.Embed(title=family, description=response['description'], color=0xf8d980)
+                embed: discord.Embed = discord.Embed(title=family, color=0xf8d980)
                 embed.add_field(name='Members', value=members_str, inline=False)
                 embed.add_field(name='Points', value=points, inline=False)
                 embed.set_footer(text='footer text')
