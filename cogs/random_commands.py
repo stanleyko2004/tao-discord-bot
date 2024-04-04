@@ -63,21 +63,13 @@ class RandomCog(commands.Cog):
             help_embed.add_field(name="Mission Commands", value=f"""
             `/list_missions` lists all missions
             `/submit_mission` submits a mission for verification
-            (admin only) `/add_mission` adds a mission
-            (admin only) `/add_weekly_mission` adds a weekly mission
-            (admin only) `/activate_mission` activates a mission
-            (admin only) `/deactivate_mission` deactivates a mission
-            (admin only) react to the verification message to verify it
             """, inline=False)
             help_embed.add_field(name="Mystery Box Commands", value=f"""
             `/use_mystery_box` uses a mystery box
             `/check_inventory` checks your inventory
-            (admin only) `/add_mystery_box` adds a mystery box to a family's inventory
             """, inline=False)
             help_embed.add_field(name="Other Commands", value=f"""
             `/help` displays this message
-            (admin only) `/set_start` sets the start of the competition
-            (admin only) `/set_end` sets the end of the competition
             """, inline=False)
 
             await interaction.response.send_message(embed=help_embed)

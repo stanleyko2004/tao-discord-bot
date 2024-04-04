@@ -194,7 +194,7 @@ class MissionsCog(commands.Cog):
             if category is None:
                 category = await guild.create_category('Verification')
 
-            channel: discord.TextChannel = await guild.create_text_channel(f'{family['name']} - {name}', overwrites=overwrites, category=category)
+            channel: discord.TextChannel = await guild.create_text_channel(f'{family["name"]} - {name}', overwrites=overwrites, category=category)
             await channel.send(f"Mission submitted! Waiting for verification for {name} mission for week {weeks_since_start(self.db)} for family {family['name']}! Please submit proof for {name} mission here!")
             await interaction.response.send_message(f"Mission submitted! Please check {channel.mention} for verification!")
         except Exception as e:

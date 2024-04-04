@@ -8,6 +8,7 @@ from dotenv import load_dotenv
 
 load_dotenv()
 
+DEV = False
 BOT_TOKEN = os.getenv("BOT_TOKEN")
 CHANNEL_ID = int(os.getenv("CHANNEL_ID"))
 
@@ -32,7 +33,8 @@ async def on_ready():
 
         # Confirming bot is running
         channel = bot.get_channel(CHANNEL_ID)
-        await channel.send("TAO bot is ready!")
+        if DEV:
+            await channel.send("TAO bot is ready!")
     except Exception as e:
         print(e)
 
