@@ -147,9 +147,17 @@ class FamilyCog(commands.Cog):
             
     @app_commands.command(name="fam_info")
     @app_commands.describe(family="family name")
-    async def fam_info_slash(self, interaction: discord.Interaction, family: str):
+    async def fam_info_slash(self, interaction: discord.Interaction, family: str = None):
         try:
-            response: Family = self.db.families.find_one({'name': family})
+            if family is None:
+                author_id: str = str(interaction.user.id)
+                response: Family = self.db.families.find_one({'members': {'$in': [author_id]}})
+                if response is None:
+                    await await_and_raise_error(interaction, f"You are not in a family, please enter a family to check info for.")
+                else:
+                    family: str = response['name']
+            else:
+                response: Family = self.db.families.find_one({'name': family})
             if response is None:
                 raise Exception(f"Family {family} does not exist.")
             else:
@@ -196,9 +204,17 @@ class FamilyCog(commands.Cog):
             
     @app_commands.command(name="fam_score")
     @app_commands.describe(family="family name")
-    async def fam_score_slash(self, interaction: discord.Interaction, family: str=""):
+    async def fam_score_slash(self, interaction: discord.Interaction, family: str = None):
         try:
-            response: Family = self.db.families.find_one({'name': family})
+            if family is None:
+                author_id: str = str(interaction.user.id)
+                response: Family = self.db.families.find_one({'members': {'$in': [author_id]}})
+                if response is None:
+                    await await_and_raise_error(interaction, f"You are not in a family, please enter a family to check score for.")
+                else:
+                    family: str = response['name']
+            else:
+                response: Family = self.db.families.find_one({'name': family})
             if response is None:
                 await await_and_raise_error(interaction, f"{family} does not exist!")
             else:
