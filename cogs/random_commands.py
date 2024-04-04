@@ -49,7 +49,7 @@ class RandomCog(commands.Cog):
             
     @app_commands.command(name="help")
     @app_commands.describe(members="members")
-    async def help(self, interaction: discord.Interaction, members: str = None):    
+    async def help(self, interaction: discord.Interaction):
         try:
             help_embed = discord.Embed(title="Help Page", color=0xf8d980)
             help_embed.add_field(name="Family Commands", value=f"""
