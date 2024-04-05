@@ -35,7 +35,7 @@ class RandomCog(commands.Cog):
     
     @app_commands.command(name="set_end")
     @app_commands.describe(end_date="Set the end of the competition in the format YYYY-MM-DD")
-    async def set_start_slash(self, interaction: discord.Interaction, end_date: str):
+    async def set_end_slash(self, interaction: discord.Interaction, end_date: str):
         try:
             date = datetime.strptime(end_date, "%Y-%m-%d")
             if not is_admin(interaction.user):
