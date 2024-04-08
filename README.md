@@ -6,3 +6,4 @@
 - gacha for mystery box?
 - REALLY NEED EAGER GENERATING MISSIONS
 - better way of letting peoople they got verified (maybe like stay there for a day and delete?)
+- fuzzy string matching?
